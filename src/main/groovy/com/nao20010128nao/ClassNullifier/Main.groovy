@@ -52,12 +52,13 @@ input.withDataInputStream {dis->
 	}
 }
 def overloads={CtClass[] classes->
+	if(classes.length==0)return "()"
 	def builder=new StringBuilder()
 	builder<<"("
 	classes.each {clazz->
 		builder<<clazz.name<<", "
 	}
-	builder.length-=2
+	builder.length=builder.length()-2
 	builder<<")"
 	return builder.toString()
 }
@@ -93,9 +94,14 @@ output.withDataOutputStream {dos->
 					}
 					method.body=bodyShouldBe
 				}
+
 				clazz.constructors.each{cnst->
-					println "<init>${overloads(cnst.parameterTypes)}"
-					cnst.body=";"
+					try{
+						println "<init>${overloads(cnst.parameterTypes)}"
+						cnst.body=";"
+					} catch (Throwable e) {
+						e.printStackTrace()
+					}
 				}
 				if(clazz.classInitializer!=null)
 					clazz.classInitializer.body=";"
