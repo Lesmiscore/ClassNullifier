@@ -10,13 +10,16 @@ import java.util.*
 OptionParser parser=new OptionParser()
 parser.accepts("input").withRequiredArg()
 parser.accepts("output").withOptionalArg()
+parser.accepts("with-classpath")
 def result=parser.parse(args)
 File input,output
 if (!result.has("input")) {
+	println "input argument is required."
 	System.exit 1
 	return
 } else {
 	input = new File(result.valueOf("input").toString())
+	println "IN: $input"
 }
 if (!result.has("output")) {
 	def renameFilename={String s->
@@ -30,10 +33,11 @@ if (!result.has("output")) {
 } else {
 	output = new File(result.valueOf("output").toString()).absoluteFile
 }
+println "OUT: $output"
 
-ClassPool cp=new ClassPool(false)
+ClassPool cp=new ClassPool(result.has("with-classpath"))
 cp.appendClassPath(input.absolutePath)
-Set<String> files=new HashSet<>()
+Set<String> files=[]
 input.withDataInputStream {dis->
 	ZipInputStream zis=null
 	try{
