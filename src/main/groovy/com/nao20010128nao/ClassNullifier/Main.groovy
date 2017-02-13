@@ -51,6 +51,16 @@ input.withDataInputStream {dis->
 			zis.close()
 	}
 }
+def overloads={CtClass[] classes->
+	def builder=new StringBuilder()
+	builder<<"("
+	classes.each {clazz->
+		builder<<clazz.name<<", "
+	}
+	builder.length-=2
+	builder<<")"
+	return builder.toString()
+}
 output.withDataOutputStream {dos->
 	ZipOutputStream zos=null
 	try{
@@ -70,7 +80,7 @@ output.withDataOutputStream {dos->
 				}
 				clazz.stopPruning(true)
 				clazz.methods.each{method->
-					println method.name
+					println "$method.name${overloads(method.parameterTypes)}"
 					if ((method.modifiers & Modifier.ABSTRACT) != 0) {
 						return
 					}
@@ -84,7 +94,7 @@ output.withDataOutputStream {dos->
 					method.body=bodyShouldBe
 				}
 				clazz.constructors.each{cnst->
-					println "<init>"
+					println "<init>${overloads(cnst.parameterTypes)}"
 					cnst.body=";"
 				}
 				if(clazz.classInitializer!=null)
