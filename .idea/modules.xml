@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/ClassNullifier.iml" filepath="$PROJECT_DIR$/.idea/modules/ClassNullifier.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/ClassNullifier_main.iml" filepath="$PROJECT_DIR$/.idea/modules/ClassNullifier_main.iml" group="ClassNullifier" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/ClassNullifier_test.iml" filepath="$PROJECT_DIR$/.idea/modules/ClassNullifier_test.iml" group="ClassNullifier" />
+    </modules>
+  </component>
+</project>
