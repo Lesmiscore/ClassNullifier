@@ -11,6 +11,7 @@ OptionParser parser=new OptionParser()
 parser.accepts("input").withRequiredArg()
 parser.accepts("output").withOptionalArg()
 parser.accepts("with-classpath")
+parser.accepts("remove-private")
 def result=parser.parse(args)
 File input,output
 if (!result.has("input")) {
@@ -80,27 +81,39 @@ output.withDataOutputStream {dos->
 					clazz.defrost()
 				}
 				clazz.stopPruning(true)
-				clazz.methods.each{method->
-					println "$method.name${overloads(method.parameterTypes)}"
-					if ((method.modifiers & Modifier.ABSTRACT) != 0) {
-						return
+				clazz.declaredMethods.each{method->
+					try{
+						println "$method.name${overloads(method.parameterTypes)}"
+						if ((method.modifiers & Modifier.ABSTRACT) != 0) {
+							return
+						}
+						CtClass ret=method.returnType
+						String bodyShouldBe="return null;"
+						if (ret == CtClass.voidType) {
+							bodyShouldBe = ";"
+						} else if (ret.primitive) {
+							bodyShouldBe = "return 0;"
+						}
+						method.body=bodyShouldBe
+					} catch (Throwable e) {
+						e.printStackTrace()
 					}
-					CtClass ret=method.returnType
-					String bodyShouldBe="return null;"
-					if (ret == CtClass.voidType) {
-						bodyShouldBe = ";"
-					} else if (ret.primitive) {
-						bodyShouldBe = "return 0;"
-					}
-					method.body=bodyShouldBe
 				}
 
-				clazz.constructors.each{cnst->
+				clazz.declaredConstructors.each{cnst->
 					try{
 						println "<init>${overloads(cnst.parameterTypes)}"
 						cnst.body=";"
 					} catch (Throwable e) {
 						e.printStackTrace()
+					}
+				}
+
+				if(result.has("remove-private")){
+					clazz.declaredFields.each {field->
+						if((field.modifiers&Modifier.PRIVATE)!=0){
+							clazz.removeField(field)
+						}
 					}
 				}
 				if(clazz.classInitializer!=null)
