@@ -28,11 +28,13 @@ public class TestClass{
 ```
 
 For all the non-constructor methods, the code will be replaced to:
+
 | Return Type                         | Code                          |
 |:-----------------------------------:|:------------------------------|
 | `void`                              | `;`(only one blank statement) |
 | primitive types (except for arrays) | `return 0;`                   |
 | non-primitive and array types       | `return null;`                |
+
 For all the constructors and class initializers, the code will be replaced to `;`.    
 Arguments are kept as is.    
 Fields are unchangeable because javassist doesn't support to change them.    
