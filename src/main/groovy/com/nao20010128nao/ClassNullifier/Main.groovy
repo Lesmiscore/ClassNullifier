@@ -36,8 +36,12 @@ if (!result.has("output")) {
 }
 println "OUT: $output"
 
+// make ClassPool object
 ClassPool cp=new ClassPool(result.has("with-classpath"))
 cp.appendClassPath(input.absolutePath)
+
+// list up files first to prevent opening file
+//   with 2 or more descriptors at same time
 Set<String> files=[]
 input.withDataInputStream {dis->
 	ZipInputStream zis=null
@@ -52,6 +56,8 @@ input.withDataInputStream {dis->
 			zis.close()
 	}
 }
+
+// do something like this: main(String[])
 def overloads={CtClass[] classes->
 	if(classes.length==0)return "()"
 	def builder=new StringBuilder()
@@ -69,10 +75,17 @@ output.withDataOutputStream {dos->
 		zos=new ZipOutputStream(dos)
 		files.each{name->
 			try {
+				// Non-class file will be skipped
 				if (!name.endsWith(".class")) {
 					println "Skipped: $name"
 					return
 				}
+				// Example:
+				// com/nao20010128nao/ClassNullifier/Main.class
+				// VVV (remove .class in the tail)
+				// com/nao20010128nao/ClassNullifier/Main
+				// VVV (replace "/" to ".")
+				// com.nao20010128nao.ClassNullifier.Main
 				String classNameGoes=name.substring(0,name.length()-6).replace("/", ".")
 				println "Modifing: $classNameGoes"
 				CtClass clazz=cp.get(classNameGoes)
@@ -83,41 +96,72 @@ output.withDataOutputStream {dos->
 				clazz.stopPruning(true)
 				clazz.declaredMethods.each{method->
 					try{
-						println "$method.name${overloads(method.parameterTypes)}"
+						if(result.has("remove-private")){
+							if((method.modifiers&Modifier.PRIVATE)!=0){
+								println "Remove: $method.name${overloads(method.parameterTypes)}"
+								clazz.removeMethod(method)
+								return
+							}
+						}
 						if ((method.modifiers & Modifier.ABSTRACT) != 0) {
+							// skip: abstract method
+							println "Skip: $method.name${overloads(method.parameterTypes)}"
 							return
 						}
-						CtClass ret=method.returnType
-						String bodyShouldBe="return null;"
+						println "$method.name${overloads(method.parameterTypes)}"
+						// make it non-native: to prevent UnsatisfiedLinkError
+						method.modifiers&=~Modifier.NATIVE
+
+						CtClass ret = method.returnType
+						// default is to return null; for non-primitive return types
+						String bodyShouldBe = "return null;"
 						if (ret == CtClass.voidType) {
+							// if return type is void, let it do nothing,
+							//   because there's no need to return value
 							bodyShouldBe = ";"
 						} else if (ret.primitive) {
+							// if return type is one of primitive type, let it return 0
 							bodyShouldBe = "return 0;"
 						}
-						method.body=bodyShouldBe
+						method.body = bodyShouldBe
 					} catch (Throwable e) {
 						e.printStackTrace()
 					}
 				}
 
 				clazz.declaredConstructors.each{cnst->
-					try{
+					if(result.has("remove-private")){
+						if((cnst.modifiers&Modifier.PRIVATE)!=0){
+							println "Remove: <init>${overloads(cnst.parameterTypes)}"
+							clazz.removeConstructor(cnst)
+							return
+						}
+					}
+					// any constructors cannot be abstract or native,
+					//   their code must be implemented by Java code
+					try {
+						// let it do nothing
 						println "<init>${overloads(cnst.parameterTypes)}"
-						cnst.body=";"
+						cnst.body = ";"
 					} catch (Throwable e) {
 						e.printStackTrace()
 					}
 				}
 
 				if(result.has("remove-private")){
+					// remove private fields
 					clazz.declaredFields.each {field->
 						if((field.modifiers&Modifier.PRIVATE)!=0){
 							clazz.removeField(field)
 						}
 					}
 				}
+
+				// <cinit>
 				if(clazz.classInitializer!=null)
 					clazz.classInitializer.body=";"
+
+				// put a class into JAR/ZIP
 				ZipEntry newZe=new ZipEntry(name)
 				zos.putNextEntry(newZe)
 				zos.write(clazz.toBytecode())
